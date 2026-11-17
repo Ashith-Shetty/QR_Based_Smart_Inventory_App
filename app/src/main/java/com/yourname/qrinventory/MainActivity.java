@@ -8,6 +8,8 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.yourname.qrinventory.data.AppDatabase;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -20,5 +22,6 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        AppDatabase.IO.execute(() -> AppDatabase.get(getApplicationContext()).productDao().count());
     }
 }
