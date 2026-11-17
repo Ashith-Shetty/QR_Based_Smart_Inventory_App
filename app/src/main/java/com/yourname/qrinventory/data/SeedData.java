@@ -1,7 +1,12 @@
 package com.yourname.qrinventory.data;
-import com.yourname.qrinventory.model.*;
+
+import com.yourname.qrinventory.model.Order;
+import com.yourname.qrinventory.model.OrderItem;
+import com.yourname.qrinventory.model.Product;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 public class SeedData {
     public static void insert(AppDatabase db) {
@@ -37,6 +42,7 @@ public class SeedData {
         list.add(make("PROD-1023", "Colgate Toothpaste", "Household", 85, 28, 8, 0));
         list.add(make("PROD-1024", "Lifebuoy Soap (3 pack)", "Household", 90, 2, 6, 0));
         db.productDao().insertAll(list);
+        insertDemoSales(db);
     }
 
     // expiryDays = 0 means no expiry
@@ -47,5 +53,38 @@ public class SeedData {
         p.stock = stock; p.lowStockThreshold = low;
         p.expiryDate = expiryDays == 0 ? 0 : System.currentTimeMillis() + expiryDays * 86400000L;
         return p;
+    }
+    // Fake order history for the last 7 days so the sales charts and order history have data in the demo
+    public static void insertDemoSales(AppDatabase db) {
+        List<Product> products = db.productDao().getAllNow();
+        if (products.isEmpty()) return;
+        Random rnd = new Random(42);
+        long now = System.currentTimeMillis();
+        for (int d = 6; d >= 0; d--) {
+            int ordersToday = 2 + rnd.nextInt(3);
+            for (int k = 0; k < ordersToday; k++) {
+                List<OrderItem> items = new ArrayList<>();
+                double subtotal = 0;
+                int lines = 2 + rnd.nextInt(3);
+                for (int i = 0; i < lines; i++) {
+                    Product p = products.get(rnd.nextInt(products.size()));
+                    OrderItem oi = new OrderItem();
+                    oi.productName = p.name;
+                    oi.unitPrice = p.price;
+                    oi.quantity = 1 + rnd.nextInt(3);
+                    subtotal += oi.unitPrice * oi.quantity;
+                    items.add(oi);
+                }
+                Order o = new Order();
+                o.timestamp = now - d * 86400000L - rnd.nextInt(6 * 3600000);
+                o.subtotal = subtotal;
+                o.discount = 0;
+                o.tax = subtotal * 0.05;
+                o.total = subtotal + o.tax;
+                long id = db.orderDao().insertOrder(o);
+                for (OrderItem oi : items) oi.orderId = id;
+                db.orderDao().insertItems(items);
+            }
+        }
     }
 }
