@@ -23,5 +23,6 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
         AppDatabase.IO.execute(() -> AppDatabase.get(getApplicationContext()).productDao().count());
+
     }
 }

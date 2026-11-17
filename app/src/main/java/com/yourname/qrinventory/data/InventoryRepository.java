@@ -1,9 +1,17 @@
 package com.yourname.qrinventory.data;
-import com.yourname.qrinventory.model.*;
+
 import android.content.Context;
+
 import androidx.lifecycle.LiveData;
 
+import com.yourname.qrinventory.model.BasketItem;
+import com.yourname.qrinventory.model.BasketLine;
+import com.yourname.qrinventory.model.CategoryStock;
+import com.yourname.qrinventory.model.DailySales;
+import com.yourname.qrinventory.model.Order;
 import com.yourname.qrinventory.model.OrderItem;
+import com.yourname.qrinventory.model.Product;
+import com.yourname.qrinventory.model.TopSeller;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,32 +74,35 @@ public class InventoryRepository {
 
     // ---------- Checkout ----------
     public void checkout(double discountPercent, Callback<Long> cb) {   // returns order id, or -1 if empty
-        AppDatabase.IO.execute(() -> db.runInTransaction(() -> {
-            List<BasketItem> items = db.basketDao().getAllNow();
-            if (items.isEmpty()) { cb.onResult(-1L); return; }
-            double subtotal = 0;
-            List<OrderItem> orderItems = new ArrayList<>();
-            for (BasketItem b : items) {
-                Product p = db.productDao().findById(b.productId);
-                subtotal += p.price * b.quantity;
-                p.stock -= b.quantity;                       // reduce inventory
-                db.productDao().update(p);
-                OrderItem oi = new OrderItem();
-                oi.productName = p.name; oi.unitPrice = p.price; oi.quantity = b.quantity;
-                orderItems.add(oi);
-            }
-            double discount = subtotal * discountPercent / 100.0;
-            double tax = (subtotal - discount) * 0.05;       // 5% GST, adjust as you like
-            Order o = new Order();
-            o.timestamp = System.currentTimeMillis();
-            o.subtotal = subtotal; o.discount = discount; o.tax = tax;
-            o.total = subtotal - discount + tax;
-            long orderId = db.orderDao().insertOrder(o);
-            for (OrderItem oi : orderItems) oi.orderId = orderId;
-            db.orderDao().insertItems(orderItems);
-            db.basketDao().clear();
-            cb.onResult(orderId);
-        }));
+        AppDatabase.IO.execute(() -> {
+            long orderId = db.runInTransaction(() -> {
+                List<BasketItem> items = db.basketDao().getAllNow();
+                if (items.isEmpty()) return -1L;
+                double subtotal = 0;
+                List<OrderItem> orderItems = new ArrayList<>();
+                for (BasketItem b : items) {
+                    Product p = db.productDao().findById(b.productId);
+                    subtotal += p.price * b.quantity;
+                    p.stock -= b.quantity;                       // reduce inventory
+                    db.productDao().update(p);
+                    OrderItem oi = new OrderItem();
+                    oi.productName = p.name; oi.unitPrice = p.price; oi.quantity = b.quantity;
+                    orderItems.add(oi);
+                }
+                double discount = subtotal * discountPercent / 100.0;
+                double tax = (subtotal - discount) * 0.05;       // 5% GST
+                Order o = new Order();
+                o.timestamp = System.currentTimeMillis();
+                o.subtotal = subtotal; o.discount = discount; o.tax = tax;
+                o.total = subtotal - discount + tax;
+                long id = db.orderDao().insertOrder(o);
+                for (OrderItem oi : orderItems) oi.orderId = id;
+                db.orderDao().insertItems(orderItems);
+                db.basketDao().clear();
+                return id;
+            });
+            cb.onResult(orderId);   // now runs after the transaction has committed
+        });
     }
 
     // ---------- Used by reports (PDF/CSV), next batch ----------
