@@ -14,30 +14,16 @@ public class SystemEventReceiver extends BroadcastReceiver {
     public static final MutableLiveData<Boolean> online = new MutableLiveData<>();
     public static final MutableLiveData<Boolean> lowBattery = new MutableLiveData<>(false);
 
+    // Handles the battery broadcasts; connectivity is handled by NetworkMonitor
     @Override
     public void onReceive(Context ctx, Intent intent) {
         String action = intent.getAction();
         if (action == null) return;
-        switch (action) {
-            case ConnectivityManager.CONNECTIVITY_ACTION: {
-                boolean now = isOnline(ctx);
-                Boolean before = online.getValue();
-                online.setValue(now);
-                if (now && Boolean.FALSE.equals(before)) {
-                    Toast.makeText(ctx, "Back online", Toast.LENGTH_SHORT).show();
-                    WorkScheduler.runNow(ctx);   // re-run the stock/expiry check
-                } else if (!now) {
-                    Toast.makeText(ctx, "You are offline", Toast.LENGTH_SHORT).show();
-                }
-                break;
-            }
-            case Intent.ACTION_BATTERY_LOW:
-                lowBattery.setValue(true);
-                Toast.makeText(ctx, "Battery low: the camera scanner drains power", Toast.LENGTH_LONG).show();
-                break;
-            case Intent.ACTION_BATTERY_OKAY:
-                lowBattery.setValue(false);
-                break;
+        if (Intent.ACTION_BATTERY_LOW.equals(action)) {
+            lowBattery.setValue(true);
+            Toast.makeText(ctx, "Battery low: the camera scanner drains power", Toast.LENGTH_LONG).show();
+        } else if (Intent.ACTION_BATTERY_OKAY.equals(action)) {
+            lowBattery.setValue(false);
         }
     }
 

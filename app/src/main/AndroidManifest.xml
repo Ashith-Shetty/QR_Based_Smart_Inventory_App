@@ -33,6 +33,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+        <provider
+            android:name=".data.ProductProvider"
+            android:authorities="com.yourname.qrinventory.provider"
+            android:exported="true" />
     </application>
 
 </manifest>
