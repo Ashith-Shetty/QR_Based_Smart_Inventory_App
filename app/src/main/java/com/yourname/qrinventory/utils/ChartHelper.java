@@ -52,8 +52,7 @@ public class ChartHelper {
         chart.setHoleColor(Color.TRANSPARENT);
         chart.setEntryLabelColor(text);
         chart.setEntryLabelTextSize(11f);
-        chart.getLegend().setTextColor(text);
-        chart.getLegend().setWordWrapEnabled(true);
+        chart.getLegend().setEnabled(false);
         chart.animateY(800);
         chart.invalidate();
     }
