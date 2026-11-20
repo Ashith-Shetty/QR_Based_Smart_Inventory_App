@@ -1,11 +1,140 @@
 package com.yourname.qrinventory.ui;
 
-import androidx.fragment.app.Fragment;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SearchView;
+import androidx.core.view.MenuProvider;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.yourname.qrinventory.R;
+import com.yourname.qrinventory.model.Product;
+import com.yourname.qrinventory.viewmodel.ProductViewModel;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public class ProductsFragment extends Fragment {
-    public ProductsFragment() {
-        super(R.layout.fragment_products);
+
+    private ProductViewModel vm;
+    private ProductAdapter adapter;
+    private ChipGroup chipGroup;
+    private TextView empty;
+    private List<Product> latest = new ArrayList<>();
+    private String selectedCategory = null;      // null = All
+    private int sortMode = R.id.sort_name;
+
+    public ProductsFragment() { super(R.layout.fragment_products); }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        vm = new ViewModelProvider(requireActivity()).get(ProductViewModel.class);
+        chipGroup = view.findViewById(R.id.chip_group);
+        empty = view.findViewById(R.id.tv_empty);
+
+        RecyclerView rv = view.findViewById(R.id.rv_products);
+        rv.setLayoutManager(new LinearLayoutManager(requireContext()));
+        adapter = new ProductAdapter(p ->
+                Toast.makeText(requireContext(), p.name, Toast.LENGTH_SHORT).show()); // bottom sheet in a later step
+        rv.setAdapter(adapter);
+
+        vm.products.observe(getViewLifecycleOwner(), list -> {
+            latest = list;
+            applyFilters();
+        });
+        vm.categories.observe(getViewLifecycleOwner(), this::buildChips);
+
+        requireActivity().addMenuProvider(new MenuProvider() {
+            @Override
+            public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+                inflater.inflate(R.menu.products_menu, menu);
+                menu.findItem(sortMode).setChecked(true);
+                SearchView sv = (SearchView) menu.findItem(R.id.action_search).getActionView();
+                sv.setQueryHint("Search products");
+                sv.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                    @Override public boolean onQueryTextSubmit(String q) { vm.setQuery(q); return true; }
+                    @Override public boolean onQueryTextChange(String q) { vm.setQuery(q); return true; }
+                });
+            }
+            @Override
+            public boolean onMenuItemSelected(@NonNull MenuItem item) {
+                int id = item.getItemId();
+                if (id == R.id.sort_name || id == R.id.sort_price_low
+                        || id == R.id.sort_price_high || id == R.id.sort_stock) {
+                    sortMode = id;
+                    item.setChecked(true);
+                    applyFilters();
+                    return true;
+                }
+                if (id == R.id.action_settings) {
+                    Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show();
+                    return true;
+                }
+                return false;
+            }
+        }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+    }
+
+    private void buildChips(List<String> categories) {
+        chipGroup.removeAllViews();
+        addChip("All", null);
+        if (categories != null) for (String c : categories) addChip(c, c);
+        chipGroup.setOnCheckedStateChangeListener((group, ids) -> {
+            if (ids.isEmpty()) return;
+            Chip chip = group.findViewById(ids.get(0));
+            selectedCategory = (String) chip.getTag();
+            applyFilters();
+        });
+    }
+
+    private void addChip(String label, String category) {
+        Chip chip = (Chip) getLayoutInflater().inflate(R.layout.chip_category, chipGroup, false);
+        chip.setId(View.generateViewId());
+        chip.setText(label);
+        chip.setTag(category);
+        chipGroup.addView(chip);
+        if (category == null ? selectedCategory == null : category.equals(selectedCategory)) {
+            chip.setChecked(true);
+        }
+    }
+
+    private void applyFilters() {
+        if (latest == null) return;
+        List<Product> out = new ArrayList<>();
+        for (Product p : latest) {
+            if (selectedCategory == null || selectedCategory.equalsIgnoreCase(p.category)) out.add(p);
+        }
+        if (sortMode == R.id.sort_price_low) {
+            Collections.sort(out, (a, b) -> Double.compare(a.price, b.price));
+        } else if (sortMode == R.id.sort_price_high) {
+            Collections.sort(out, (a, b) -> Double.compare(b.price, a.price));
+        } else if (sortMode == R.id.sort_stock) {
+            Collections.sort(out, (a, b) -> Integer.compare(a.stock, b.stock));
+        } else {
+            Collections.sort(out, (a, b) -> a.name.compareToIgnoreCase(b.name));
+        }
+        adapter.submitList(out);
+        empty.setVisibility(out.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        vm.setQuery("");   // don't leave a hidden search filter active on other tabs
     }
 }

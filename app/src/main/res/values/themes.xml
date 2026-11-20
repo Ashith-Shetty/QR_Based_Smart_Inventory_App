@@ -10,4 +10,7 @@
     </style>
 
     <style name="Theme.QRBasedSmartInventoryApp" parent="Base.Theme.QRBasedSmartInventoryApp" />
+    <style name="ThemeOverlay.App.Toolbar" parent="">
+        <item name="colorControlNormal">?attr/colorOnPrimary</item>
+    </style>
 </resources>
