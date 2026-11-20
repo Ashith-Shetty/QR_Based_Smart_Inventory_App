@@ -22,6 +22,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.yourname.qrinventory.R;
 import com.yourname.qrinventory.model.Product;
+import com.yourname.qrinventory.viewmodel.BasketViewModel;
 import com.yourname.qrinventory.viewmodel.ProductViewModel;
 
 import java.util.ArrayList;
@@ -49,8 +50,11 @@ public class ProductsFragment extends Fragment {
 
         RecyclerView rv = view.findViewById(R.id.rv_products);
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new ProductAdapter(p ->
-                Toast.makeText(requireContext(), p.name, Toast.LENGTH_SHORT).show()); // bottom sheet in a later step
+        BasketViewModel basketVm = new ViewModelProvider(requireActivity()).get(BasketViewModel.class);
+        adapter = new ProductAdapter(p -> {
+            basketVm.onScanned(p.qrCode);   // same call the real scanner will make
+            Toast.makeText(requireContext(), "Added " + p.name, Toast.LENGTH_SHORT).show();
+        });
         rv.setAdapter(adapter);
 
         vm.products.observe(getViewLifecycleOwner(), list -> {
