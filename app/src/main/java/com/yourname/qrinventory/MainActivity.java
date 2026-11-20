@@ -7,7 +7,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.navigation.NavController;
+import androidx.navigation.fragment.NavHostFragment;
+import androidx.navigation.ui.AppBarConfiguration;
+import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.yourname.qrinventory.data.AppDatabase;
 
 public class MainActivity extends AppCompatActivity {
@@ -24,5 +30,18 @@ public class MainActivity extends AppCompatActivity {
         });
         AppDatabase.IO.execute(() -> AppDatabase.get(getApplicationContext()).productDao().count());
 
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        NavHostFragment host = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host);
+        NavController nav = host.getNavController();
+
+        AppBarConfiguration cfg = new AppBarConfiguration.Builder(
+                R.id.productsFragment, R.id.basketFragment, R.id.scanFragment,
+                R.id.historyFragment, R.id.profileFragment).build();
+        NavigationUI.setupActionBarWithNavController(this, nav, cfg);
+
+        BottomNavigationView bottom = findViewById(R.id.bottom_nav);
+        NavigationUI.setupWithNavController(bottom, nav);
     }
 }
