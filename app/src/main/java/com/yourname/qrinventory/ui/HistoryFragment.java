@@ -1,11 +1,123 @@
 package com.yourname.qrinventory.ui;
 
-import androidx.fragment.app.Fragment;
+import android.content.Context;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.charts.PieChart;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.snackbar.Snackbar;
 import com.yourname.qrinventory.R;
+import com.yourname.qrinventory.model.Order;
+import com.yourname.qrinventory.service.WorkScheduler;
+import com.yourname.qrinventory.utils.ChartHelper;
+import com.yourname.qrinventory.utils.ReportExporter;
+import com.yourname.qrinventory.utils.SessionManager;
+import com.yourname.qrinventory.utils.ShareUtils;
+import com.yourname.qrinventory.viewmodel.ReportViewModel;
+
+import java.io.File;
 
 public class HistoryFragment extends Fragment {
-    public HistoryFragment() {
-        super(R.layout.fragment_history);
+
+    private final ActivityResultLauncher<String> importPicker =
+            registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+                if (uri != null) importCsv(uri);
+            });
+
+    public HistoryFragment() { super(R.layout.fragment_history); }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        Context ctx = requireContext();
+        ReportViewModel vm = new ViewModelProvider(this).get(ReportViewModel.class);
+
+        // Charts (CO5 data visualisation)
+        PieChart pie = view.findViewById(R.id.pie_chart);
+        BarChart bar = view.findViewById(R.id.bar_chart);
+        LineChart line = view.findViewById(R.id.line_chart);
+        pie.setTouchEnabled(false);    // so the page scrolls smoothly over the charts
+        bar.setTouchEnabled(false);
+        line.setTouchEnabled(false);
+        vm.stockByCategory.observe(getViewLifecycleOwner(), d -> ChartHelper.showStockPie(pie, d));
+        vm.topSellers.observe(getViewLifecycleOwner(), d -> ChartHelper.showTopSellersBar(bar, d));
+        vm.dailySales.observe(getViewLifecycleOwner(), d -> ChartHelper.showDailySalesLine(line, d));
+
+        // Order history
+        TextView none = view.findViewById(R.id.tv_no_orders);
+        RecyclerView rv = view.findViewById(R.id.rv_orders);
+        rv.setLayoutManager(new LinearLayoutManager(ctx));
+        rv.setNestedScrollingEnabled(false);
+        OrderAdapter adapter = new OrderAdapter(this::onOrderClicked);
+        rv.setAdapter(adapter);
+        vm.orders.observe(getViewLifecycleOwner(), list -> {
+            adapter.setItems(list);
+            none.setVisibility(list == null || list.isEmpty() ? View.VISIBLE : View.GONE);
+        });
+
+        // Reports, data sharing and background work buttons
+        view.findViewById(R.id.btn_export_inventory).setOnClickListener(v ->
+                ReportExporter.exportInventoryCsv(ctx, (file, err) ->
+                        deliver(file, err, "text/csv", "Inventory export")));
+        view.findViewById(R.id.btn_export_low).setOnClickListener(v ->
+                ReportExporter.exportLowStockCsv(ctx, (file, err) ->
+                        deliver(file, err, "text/csv", "Low stock report")));
+
+        View btnImport = view.findViewById(R.id.btn_import);
+        btnImport.setVisibility(SessionManager.isAdmin(ctx) ? View.VISIBLE : View.GONE);
+        btnImport.setOnClickListener(v -> importPicker.launch("*/*"));
+
+        view.findViewById(R.id.btn_refresh_alerts).setOnClickListener(v -> {
+            WorkScheduler.runNow(ctx);
+            Toast.makeText(ctx, "Checking stock and expiry...", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void deliver(File file, String err, String mime, String subject) {
+        if (!isAdded()) return;
+        if (err != null) {
+            Toast.makeText(requireContext(), err, Toast.LENGTH_LONG).show();
+            return;
+        }
+        ShareUtils.shareFile(requireContext(), file, mime, subject);
+    }
+
+    private void onOrderClicked(Order o) {
+        new MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Order #" + o.id)
+                .setItems(new String[]{"View bill (PDF)", "Share bill"}, (d, which) ->
+                        ReportExporter.exportInvoice(requireContext(), o.id, (file, err) -> {
+                            if (!isAdded()) return;
+                            if (err != null) {
+                                Toast.makeText(requireContext(), err, Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            if (which == 0) ShareUtils.viewFile(requireContext(), file, "application/pdf");
+                            else ShareUtils.shareFile(requireContext(), file, "application/pdf", "Bill #" + o.id);
+                        }))
+                .show();
+    }
+
+    private void importCsv(Uri uri) {
+        ReportExporter.importInventoryCsv(requireContext(), uri, (count, err) -> {
+            if (!isAdded()) return;
+            String msg = err != null ? err : count + " products imported";
+            Snackbar.make(requireView(), msg, Snackbar.LENGTH_LONG).show();
+        });
     }
 }
