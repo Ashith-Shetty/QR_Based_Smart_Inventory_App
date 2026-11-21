@@ -1,5 +1,6 @@
 package com.yourname.qrinventory.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -15,13 +16,16 @@ import androidx.core.view.MenuProvider;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.print.PrintHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.yourname.qrinventory.R;
 import com.yourname.qrinventory.model.Product;
+import com.yourname.qrinventory.utils.QrUtils;
 import com.yourname.qrinventory.viewmodel.BasketViewModel;
 import com.yourname.qrinventory.viewmodel.ProductViewModel;
 
@@ -52,10 +56,29 @@ public class ProductsFragment extends Fragment {
         rv.setLayoutManager(new LinearLayoutManager(requireContext()));
         BasketViewModel basketVm = new ViewModelProvider(requireActivity()).get(BasketViewModel.class);
         adapter = new ProductAdapter(p -> {
-            basketVm.onScanned(p.qrCode);   // same call the real scanner will make
+            basketVm.onScanned(p.qrCode);
             Toast.makeText(requireContext(), "Added " + p.name, Toast.LENGTH_SHORT).show();
         });
         rv.setAdapter(adapter);
+        adapter.setMenuActions(new ProductAdapter.MenuActions() {
+            @Override public void onEdit(Product p) {
+                startActivity(new Intent(requireContext(), AddProductActivity.class)
+                        .putExtra("product_id", (long) p.id));
+            }
+            @Override public void onShowQr(Product p) {
+                startActivity(new Intent(requireContext(), QrCodeActivity.class)
+                        .putExtra("qr", p.qrCode).putExtra("name", p.name));
+            }
+            @Override public void onDelete(Product p) {
+                new MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Delete " + p.name + "?")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete", (d, w) -> vm.delete(p))
+                        .show();
+            }
+        });
+        view.findViewById(R.id.fab_add).setOnClickListener(v ->
+                startActivity(new Intent(requireContext(), AddProductActivity.class)));
 
         vm.products.observe(getViewLifecycleOwner(), list -> {
             latest = list;
@@ -85,6 +108,7 @@ public class ProductsFragment extends Fragment {
                     applyFilters();
                     return true;
                 }
+                if (id == R.id.action_print_qr) { printSheet(); return true; }
                 if (id == R.id.action_settings) {
                     Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show();
                     return true;
@@ -92,6 +116,16 @@ public class ProductsFragment extends Fragment {
                 return false;
             }
         }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+    }
+
+    private void printSheet() {
+        if (latest == null || latest.isEmpty()) {
+            Toast.makeText(requireContext(), "No products to print", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        PrintHelper helper = new PrintHelper(requireContext());
+        helper.setScaleMode(PrintHelper.SCALE_MODE_FIT);
+        helper.printBitmap("Product QR codes", QrUtils.sheet(latest));
     }
 
     private void buildChips(List<String> categories) {
@@ -139,6 +173,6 @@ public class ProductsFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        vm.setQuery("");   // don't leave a hidden search filter active on other tabs
+        vm.setQuery("");
     }
 }
