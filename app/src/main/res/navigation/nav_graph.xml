@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/productsFragment">
+    <fragment android:id="@+id/productsFragment" android:name="com.yourname.qrinventory.ui.ProductsFragment" android:label="Products"/>
+    <fragment android:id="@+id/basketFragment" android:name="com.yourname.qrinventory.ui.BasketFragment" android:label="Basket"/>
+    <fragment android:id="@+id/scanFragment" android:name="com.yourname.qrinventory.ui.ScanFragment" android:label="Scan"/>
+    <fragment android:id="@+id/historyFragment" android:name="com.yourname.qrinventory.ui.HistoryFragment" android:label="History"/>
+    <fragment android:id="@+id/profileFragment" android:name="com.yourname.qrinventory.ui.ProfileFragment" android:label="Profile"/>
+</navigation>

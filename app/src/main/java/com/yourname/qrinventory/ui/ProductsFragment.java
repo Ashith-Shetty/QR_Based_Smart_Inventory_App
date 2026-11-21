@@ -26,6 +26,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.yourname.qrinventory.R;
 import com.yourname.qrinventory.model.Product;
 import com.yourname.qrinventory.utils.QrUtils;
+import com.yourname.qrinventory.utils.SessionManager;
 import com.yourname.qrinventory.viewmodel.BasketViewModel;
 import com.yourname.qrinventory.viewmodel.ProductViewModel;
 
@@ -48,6 +49,8 @@ public class ProductsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        final boolean admin = SessionManager.isAdmin(requireContext());
+
         vm = new ViewModelProvider(requireActivity()).get(ProductViewModel.class);
         chipGroup = view.findViewById(R.id.chip_group);
         empty = view.findViewById(R.id.tv_empty);
@@ -79,6 +82,8 @@ public class ProductsFragment extends Fragment {
         });
         view.findViewById(R.id.fab_add).setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), AddProductActivity.class)));
+        view.findViewById(R.id.fab_add).setVisibility(admin ? View.VISIBLE : View.GONE);
+        if (!admin) adapter.setMenuActions(null);   // no edit/QR/delete menu for customers
 
         vm.products.observe(getViewLifecycleOwner(), list -> {
             latest = list;
@@ -90,6 +95,7 @@ public class ProductsFragment extends Fragment {
             @Override
             public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
                 inflater.inflate(R.menu.products_menu, menu);
+                menu.findItem(R.id.action_print_qr).setVisible(admin);
                 menu.findItem(sortMode).setChecked(true);
                 SearchView sv = (SearchView) menu.findItem(R.id.action_search).getActionView();
                 sv.setQueryHint("Search products");

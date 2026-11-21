@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:scaleType="fillCenter"/>
+
+    <View
+        android:layout_width="250dp"
+        android:layout_height="250dp"
+        android:layout_gravity="center"
+        android:background="@drawable/scan_frame"/>
+
+    <FrameLayout
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:orientation="vertical">
+            <TextView android:id="@+id/tv_offline" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="10dp"
+                android:gravity="center" android:visibility="gone"
+                android:background="?attr/colorErrorContainer"
+                android:textColor="?attr/colorOnErrorContainer"
+                android:text="You are offline. Product lookup is unavailable."/>
+            <TextView android:id="@+id/tv_battery" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:padding="10dp"
+                android:gravity="center" android:visibility="gone"
+                android:background="?attr/colorTertiaryContainer"
+                android:textColor="?attr/colorOnTertiaryContainer"
+                android:text="Battery low. The scanner drains power."/>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/perm_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_margin="24dp"
+            android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Camera permission is needed to scan QR codes."
+                    android:textAppearance="?attr/textAppearanceBodyLarge"/>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_grant" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:text="Grant permission"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_margin="12dp">
+            <LinearLayout android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp">
+                <TextView android:id="@+id/tv_result" android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Point the camera at a product QR code"
+                    android:textAppearance="?attr/textAppearanceTitleMedium"/>
+                <TextView android:id="@+id/tv_light" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="4dp"
+                    android:textAppearance="?attr/textAppearanceBodySmall"/>
+                <LinearLayout android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_torch"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:layout_marginEnd="8dp"
+                        android:text="Torch: OFF"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_done"
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="Done"/>
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+    </FrameLayout>
+</FrameLayout>
