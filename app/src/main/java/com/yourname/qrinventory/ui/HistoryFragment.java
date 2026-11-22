@@ -1,7 +1,10 @@
 package com.yourname.qrinventory.ui;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
@@ -11,6 +14,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -39,6 +43,19 @@ public class HistoryFragment extends Fragment {
                 if (uri != null) importCsv(uri);
             });
 
+    private final ActivityResultLauncher<String> notificationPermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (!isAdded()) return;
+                if (granted) runAlertCheck();
+                else Toast.makeText(requireContext(),
+                        "Notifications are off for this app. Enable them in system settings to see alerts.",
+                        Toast.LENGTH_LONG).show();
+            });
+
+    private void runAlertCheck() {
+        WorkScheduler.runNow(requireContext());
+        Toast.makeText(requireContext(), "Checking stock and expiry...", Toast.LENGTH_SHORT).show();
+    }
     public HistoryFragment() { super(R.layout.fragment_history); }
 
     @Override
@@ -83,8 +100,12 @@ public class HistoryFragment extends Fragment {
         btnImport.setOnClickListener(v -> importPicker.launch("*/*"));
 
         view.findViewById(R.id.btn_refresh_alerts).setOnClickListener(v -> {
-            WorkScheduler.runNow(ctx);
-            Toast.makeText(ctx, "Checking stock and expiry...", Toast.LENGTH_SHORT).show();
+            if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx,
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+            } else {
+                runAlertCheck();
+            }
         });
     }
 
