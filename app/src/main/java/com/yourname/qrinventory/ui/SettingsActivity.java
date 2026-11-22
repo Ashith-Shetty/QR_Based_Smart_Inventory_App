@@ -1,11 +1,13 @@
 package com.yourname.qrinventory.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -13,6 +15,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.slider.Slider;
 import com.yourname.qrinventory.R;
+import com.yourname.qrinventory.service.BackupService;
 import com.yourname.qrinventory.utils.AppSettings;
 import com.yourname.qrinventory.utils.SessionManager;
 
@@ -50,6 +53,16 @@ public class SettingsActivity extends AppCompatActivity {
             int d = (int) value;
             tvDays.setText(daysText(d));
             if (fromUser) AppSettings.setExpiryDays(this, d);
+        });
+
+        // Backup: starts the foreground service; its result comes back through LiveData
+        View btnBackup = findViewById(R.id.btn_backup);
+        TextView tvBackup = findViewById(R.id.tv_backup_status);
+        btnBackup.setOnClickListener(v ->
+                ContextCompat.startForegroundService(this, new Intent(this, BackupService.class)));
+        BackupService.running.observe(this, r -> btnBackup.setEnabled(!Boolean.TRUE.equals(r)));
+        BackupService.status.observe(this, s -> {
+            if (s != null) tvBackup.setText(s);
         });
     }
 

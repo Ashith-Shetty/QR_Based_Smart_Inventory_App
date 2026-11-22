@@ -11,6 +11,8 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
     <application
         android:name=".InventoryApp"
@@ -80,6 +82,11 @@
             android:name=".ui.SettingsActivity"
             android:exported="false"
             android:label="Settings" />
+
+        <service
+            android:name=".service.BackupService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>
