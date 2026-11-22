@@ -40,6 +40,8 @@ public class ProfileFragment extends Fragment {
         view.findViewById(R.id.btn_maps).setOnClickListener(v ->
                 startSafely(new Intent(Intent.ACTION_VIEW, Uri.parse(
                         "geo:12.9716,77.5946?q=12.9716,77.5946(" + Uri.encode("QR Mart Supermarket") + ")"))));
+        view.findViewById(R.id.btn_store_map).setOnClickListener(v ->
+                startActivity(new Intent(ctx, StoreMapActivity.class)));
 
         // Dark mode toggle (CO3)
         MaterialSwitch dark = view.findViewById(R.id.switch_dark);

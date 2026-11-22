@@ -35,6 +35,10 @@
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="Get directions to the store"/>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_store_map" style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="Find nearby stores (map)"/>
         <com.google.android.material.materialswitch.MaterialSwitch
             android:id="@+id/switch_dark" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:layout_marginTop="16dp"

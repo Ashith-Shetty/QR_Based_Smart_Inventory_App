@@ -59,4 +59,5 @@ dependencies {
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.zxing:core:3.5.3")
     implementation("androidx.print:print:1.0.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 }
