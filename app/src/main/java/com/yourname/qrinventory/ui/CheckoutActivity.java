@@ -26,6 +26,7 @@ public class CheckoutActivity extends AppCompatActivity {
 
     private BasketViewModel vm;
     private double subtotal = 0;
+    private String lastTxn;
     private File invoice;
     private TextView tvItems, tvSubtotal, tvDiscount, tvGst, tvTotal, tvSuccess;
     private CompoundButton cbDiscount;
@@ -70,8 +71,18 @@ public class CheckoutActivity extends AppCompatActivity {
         cbDiscount.setOnCheckedChangeListener((b, checked) -> updateTotals());
 
         btnPay.setOnClickListener(v -> {
-            btnPay.setEnabled(false);
-            vm.checkout(cbDiscount.isChecked() ? 10 : 0);
+            if (subtotal <= 0) {
+                Snackbar.make(findViewById(R.id.checkout_root), "Basket is empty", Snackbar.LENGTH_LONG).show();
+                return;
+            }
+            double discount = cbDiscount.isChecked() ? subtotal * 0.10 : 0;
+            double total = (subtotal - discount) * 1.05;
+            // Simulated UPI payment first; the order is only placed once the payment succeeds
+            new UpiPaymentDialog(this, total, txn -> {
+                lastTxn = txn;
+                btnPay.setEnabled(false);
+                vm.checkout(cbDiscount.isChecked() ? 10 : 0);
+            }).show();
         });
         vm.orderResult.observe(this, this::onOrder);
 
@@ -106,7 +117,8 @@ public class CheckoutActivity extends AppCompatActivity {
                 return;
             }
             invoice = file;
-            tvSuccess.setText("Order #" + id + " placed. Your bill is ready.");
+            tvSuccess.setText("Order #" + id + " placed"
+                    + (lastTxn != null ? " (paid via UPI, " + lastTxn + ")" : "") + ". Your bill is ready.");
             btnShare.setEnabled(true);
             btnView.setEnabled(true);
         });

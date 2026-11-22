@@ -15,6 +15,7 @@
             </group>
         </menu>
     </item>
+    <item android:id="@+id/action_voice" android:title="Voice search" app:showAsAction="never"/>
     <item android:id="@+id/action_print_qr" android:title="Print all QR codes" app:showAsAction="never"/>
     <item android:id="@+id/action_settings" android:title="Settings" app:showAsAction="never"/>
 </menu>

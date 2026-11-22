@@ -42,6 +42,9 @@ public class PdfInvoiceGenerator {
         String date = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault())
                 .format(new Date(order.timestamp));
         c.drawText("QR Smart Inventory Store", M, 60, big);
+        Paint small = new Paint(normal);
+        small.setTextSize(10);
+        c.drawText("QR Mart MG Road, Bengaluru (12.9716 N, 77.5946 E)  |  Ph: +91 80 1234 5678", M, 76, small);
         c.drawText("Invoice #" + order.id, M, 90, bold);
         c.drawText(date, M, 108, normal);
         c.drawLine(M, 122, W - M, 122, normal);
