@@ -17,6 +17,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,6 +27,7 @@ import com.github.mikephil.charting.charts.PieChart;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.yourname.qrinventory.R;
+import com.yourname.qrinventory.data.InventoryRepository;
 import com.yourname.qrinventory.model.Order;
 import com.yourname.qrinventory.service.WorkScheduler;
 import com.yourname.qrinventory.utils.ChartHelper;
@@ -121,17 +123,28 @@ public class HistoryFragment extends Fragment {
     private void onOrderClicked(Order o) {
         new MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Order #" + o.id)
-                .setItems(new String[]{"View bill (PDF)", "Share bill"}, (d, which) ->
-                        ReportExporter.exportInvoice(requireContext(), o.id, (file, err) -> {
-                            if (!isAdded()) return;
-                            if (err != null) {
-                                Toast.makeText(requireContext(), err, Toast.LENGTH_LONG).show();
-                                return;
-                            }
-                            if (which == 0) ShareUtils.viewFile(requireContext(), file, "application/pdf");
-                            else ShareUtils.shareFile(requireContext(), file, "application/pdf", "Bill #" + o.id);
-                        }))
+                .setItems(new String[]{"View bill (PDF)", "Share bill", "Re-order these items"}, (d, which) -> {
+                    if (which == 2) { reorder(o); return; }
+                    ReportExporter.exportInvoice(requireContext(), o.id, (file, err) -> {
+                        if (!isAdded()) return;
+                        if (err != null) {
+                            Toast.makeText(requireContext(), err, Toast.LENGTH_LONG).show();
+                            return;
+                        }
+                        if (which == 0) ShareUtils.viewFile(requireContext(), file, "application/pdf");
+                        else ShareUtils.shareFile(requireContext(), file, "application/pdf", "Bill #" + o.id);
+                    });
+                })
                 .show();
+    }
+
+    private void reorder(Order o) {
+        View root = requireView();
+        new InventoryRepository(requireContext()).reorder(o.id, msg -> root.post(() ->
+                Snackbar.make(root, msg, Snackbar.LENGTH_LONG)
+                        .setAction("View basket", v ->
+                                Navigation.findNavController(root).navigate(R.id.basketFragment))
+                        .show()));
     }
 
     private void importCsv(Uri uri) {

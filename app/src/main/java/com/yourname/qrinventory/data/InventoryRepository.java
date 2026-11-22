@@ -107,5 +107,63 @@ public class InventoryRepository {
 
     // ---------- Used by reports (PDF/CSV), next batch ----------
     public List<OrderItem> getOrderItems(long orderId) { return db.orderDao().itemsOf(orderId); }   // call on a background thread
-    public Order getOrder(long orderId) { return db.orderDao().findById(orderId); }                  // call on a background thread
+    public Order getOrder(long orderId) { return db.orderDao().findById(orderId); }// call on a background thread
+
+
+    // ---------- Scanned-item bottom sheet and re-order ----------
+    public void findProductByQr(String qr, Callback<Product> cb) {
+        AppDatabase.IO.execute(() -> cb.onResult(db.productDao().findByQr(qr)));
+    }
+
+    // Adds `qty` of a product to the basket, never going above the stock level
+    public void addQuantityToBasket(String qr, int qty, Callback<String> cb) {
+        AppDatabase.IO.execute(() -> {
+            Product p = db.productDao().findByQr(qr);
+            if (p == null) { cb.onResult("Unknown product"); return; }
+            BasketItem existing = db.basketDao().findByProduct(p.id);
+            int current = existing == null ? 0 : existing.quantity;
+            if (current + qty > p.stock) {
+                cb.onResult("Only " + p.stock + " in stock"
+                        + (current > 0 ? " (" + current + " already in your basket)" : ""));
+                return;
+            }
+            if (existing == null) {
+                BasketItem b = new BasketItem();
+                b.productId = p.id; b.quantity = qty;
+                db.basketDao().insert(b);
+            } else {
+                existing.quantity = current + qty;
+                db.basketDao().update(existing);
+            }
+            cb.onResult("Added " + qty + " x " + p.name);
+        });
+    }
+
+    // Puts the items of an old order back into the basket (skips anything sold out or removed)
+    public void reorder(long orderId, Callback<String> cb) {
+        AppDatabase.IO.execute(() -> {
+            List<OrderItem> items = db.orderDao().itemsOf(orderId);
+            int added = 0, skipped = 0;
+            for (OrderItem oi : items) {
+                Product p = db.productDao().findByName(oi.productName);
+                if (p == null || p.stock <= 0) { skipped++; continue; }
+                BasketItem existing = db.basketDao().findByProduct(p.id);
+                int current = existing == null ? 0 : existing.quantity;
+                int target = Math.min(p.stock, current + oi.quantity);
+                if (target <= current) { skipped++; continue; }
+                if (existing == null) {
+                    BasketItem b = new BasketItem();
+                    b.productId = p.id; b.quantity = target;
+                    db.basketDao().insert(b);
+                } else {
+                    existing.quantity = target;
+                    db.basketDao().update(existing);
+                }
+                added++;
+            }
+            String msg = added + " item(s) added to your basket";
+            if (skipped > 0) msg += ", " + skipped + " unavailable";
+            cb.onResult(msg);
+        });
+    }
 }

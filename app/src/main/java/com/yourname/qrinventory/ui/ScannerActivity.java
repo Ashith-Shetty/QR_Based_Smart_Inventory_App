@@ -38,6 +38,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
@@ -45,6 +46,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
 import com.yourname.qrinventory.R;
+import com.yourname.qrinventory.model.Product;
 import com.yourname.qrinventory.service.SystemEventReceiver;
 import com.yourname.qrinventory.viewmodel.BasketViewModel;
 
@@ -71,6 +73,7 @@ public class ScannerActivity extends AppCompatActivity implements SensorEventLis
     private boolean torchOn = false;
     private boolean pickMode;
     private String lastCode = "";
+    private boolean sheetOpen = false;
     private long lastTime = 0;
 
     private SensorManager sensorManager;
@@ -118,8 +121,9 @@ public class ScannerActivity extends AppCompatActivity implements SensorEventLis
         scanner = BarcodeScanning.getClient(ob.build());
 
         vm = new ViewModelProvider(this).get(BasketViewModel.class);
-        vm.message.observe(this, msg -> { if (msg != null) tvResult.setText(msg); });
 
+        vm.message.observe(this, msg -> { if (msg != null) tvResult.setText(msg); });
+        vm.scannedProduct.observe(this, this::showItemSheet);
         tvOffline.setVisibility(SystemEventReceiver.isOnline(this) ? View.GONE : View.VISIBLE);
         SystemEventReceiver.online.observe(this, on ->
                 tvOffline.setVisibility(Boolean.FALSE.equals(on) ? View.VISIBLE : View.GONE));
@@ -252,6 +256,7 @@ public class ScannerActivity extends AppCompatActivity implements SensorEventLis
     }
 
     private void handleCode(String code) {
+        if (sheetOpen) return;
         long now = SystemClock.elapsedRealtime();
         if (code.equals(lastCode) && now - lastTime < 3000) return;
         if (now - lastTime < 1000) return;
@@ -265,9 +270,55 @@ public class ScannerActivity extends AppCompatActivity implements SensorEventLis
         }
         previewView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
         tvResult.setText("Scanned: " + code);
-        vm.onScanned(code);
+        vm.lookupScan(code);
     }
 
+    // Bottom sheet that shows the scanned product and lets the shopper pick a quantity
+    private void showItemSheet(Product p) {
+        if (p == null || sheetOpen) return;
+        vm.scannedProduct.setValue(null);   // so it is not shown again after a rotation
+        sheetOpen = true;
+
+        BottomSheetDialog dialog = new BottomSheetDialog(this);
+        View v = getLayoutInflater().inflate(R.layout.sheet_scanned_item, null);
+        dialog.setContentView(v);
+
+        TextView tvName = v.findViewById(R.id.sheet_name);
+        TextView tvMeta = v.findViewById(R.id.sheet_meta);
+        TextView tvPrice = v.findViewById(R.id.sheet_price);
+        TextView tvQty = v.findViewById(R.id.sheet_qty);
+        TextView tvTotal = v.findViewById(R.id.sheet_total);
+        View btnMinus = v.findViewById(R.id.sheet_minus);
+        View btnPlus = v.findViewById(R.id.sheet_plus);
+        Button btnAdd = v.findViewById(R.id.sheet_add);
+
+        tvName.setText(p.name);
+        tvMeta.setText(p.category + "  |  " + p.stock + " in stock");
+        tvPrice.setText(String.format(Locale.getDefault(), "₹%.2f each", p.price));
+
+        int[] qty = {1};
+        Runnable refresh = () -> {
+            tvQty.setText(String.valueOf(qty[0]));
+            tvTotal.setText(String.format(Locale.getDefault(), "₹%.2f", p.price * qty[0]));
+            btnMinus.setEnabled(qty[0] > 1);
+            btnPlus.setEnabled(qty[0] < p.stock);
+        };
+        btnMinus.setOnClickListener(x -> { qty[0]--; refresh.run(); });
+        btnPlus.setOnClickListener(x -> { qty[0]++; refresh.run(); });
+        refresh.run();
+
+        if (p.stock <= 0) {
+            btnAdd.setEnabled(false);
+            btnAdd.setText("Out of stock");
+        }
+        btnAdd.setOnClickListener(x -> {
+            vm.addScanned(p.qrCode, qty[0]);
+            dialog.dismiss();
+        });
+        v.findViewById(R.id.sheet_cancel).setOnClickListener(x -> dialog.dismiss());
+        dialog.setOnDismissListener(d -> sheetOpen = false);
+        dialog.show();
+    }
     void setTorch(boolean on) {
         if (camera == null || !camera.getCameraInfo().hasFlashUnit()) return;
         torchOn = on;

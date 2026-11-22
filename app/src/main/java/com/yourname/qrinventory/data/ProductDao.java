@@ -1,5 +1,5 @@
 package com.yourname.qrinventory.data;
-import com.yourname.qrinventory.model.*;
+
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Delete;
@@ -7,6 +7,10 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
+
+import com.yourname.qrinventory.model.CategoryStock;
+import com.yourname.qrinventory.model.Product;
+
 import java.util.List;
 
 @Dao
@@ -19,6 +23,7 @@ public interface ProductDao {
     @Query("SELECT * FROM products ORDER BY name") LiveData<List<Product>> getAll();
     @Query("SELECT * FROM products WHERE name LIKE '%' || :q || '%' OR category LIKE '%' || :q || '%'")
     LiveData<List<Product>> search(String q);
+    @Query("SELECT * FROM products WHERE name = :name LIMIT 1") Product findByName(String name);
     @Query("SELECT * FROM products WHERE category = :cat") LiveData<List<Product>> byCategory(String cat);
     @Query("SELECT * FROM products WHERE qrCode = :code LIMIT 1") Product findByQr(String code);
     @Query("SELECT * FROM products WHERE id = :id") Product findById(long id);

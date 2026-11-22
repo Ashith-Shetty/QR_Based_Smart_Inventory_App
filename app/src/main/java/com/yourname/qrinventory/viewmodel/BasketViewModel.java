@@ -8,6 +8,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Transformations;
 import com.yourname.qrinventory.data.InventoryRepository;
 import com.yourname.qrinventory.model.BasketLine;
+import com.yourname.qrinventory.model.Product;
+
 import java.util.List;
 
 public class BasketViewModel extends AndroidViewModel {
@@ -26,6 +28,21 @@ public class BasketViewModel extends AndroidViewModel {
             if (list != null) for (BasketLine l : list) sum += l.price * l.quantity;
             return sum;
         });
+    }
+
+    public final MutableLiveData<Product> scannedProduct = new MutableLiveData<>();
+
+    // Step 1 of a scan: look the product up so the bottom sheet can show its details
+    public void lookupScan(String qr) {
+        repo.findProductByQr(qr, p -> {
+            if (p == null) message.postValue("Unknown product: " + qr);
+            else scannedProduct.postValue(p);
+        });
+    }
+
+    // Step 2: the shopper confirmed a quantity
+    public void addScanned(String qr, int qty) {
+        repo.addQuantityToBasket(qr, qty, msg -> message.postValue(msg));
     }
 
     public void onScanned(String qr) { repo.addScannedToBasket(qr, msg -> message.postValue(msg)); }
