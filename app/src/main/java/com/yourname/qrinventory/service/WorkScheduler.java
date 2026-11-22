@@ -1,6 +1,7 @@
 package com.yourname.qrinventory.service;
 
 import android.content.Context;
+import androidx.work.Data;
 import androidx.work.ExistingPeriodicWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.PeriodicWorkRequest;
@@ -15,8 +16,10 @@ public class WorkScheduler {
                 "stock_check", ExistingPeriodicWorkPolicy.KEEP, req);
     }
 
-    // Runs the check once right now (for the demo and the "refresh" button)
+    // Runs the check once right now (the "check now" button), regardless of the Settings switch
     public static void runNow(Context ctx) {
-        WorkManager.getInstance(ctx).enqueue(new OneTimeWorkRequest.Builder(StockCheckWorker.class).build());
+        Data manual = new Data.Builder().putBoolean(StockCheckWorker.KEY_MANUAL, true).build();
+        WorkManager.getInstance(ctx).enqueue(
+                new OneTimeWorkRequest.Builder(StockCheckWorker.class).setInputData(manual).build());
     }
 }

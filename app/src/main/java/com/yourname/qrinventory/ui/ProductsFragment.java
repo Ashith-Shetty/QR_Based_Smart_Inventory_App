@@ -116,7 +116,7 @@ public class ProductsFragment extends Fragment {
                 }
                 if (id == R.id.action_print_qr) { printSheet(); return true; }
                 if (id == R.id.action_settings) {
-                    Toast.makeText(requireContext(), "Settings coming soon", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(requireContext(), SettingsActivity.class));
                     return true;
                 }
                 return false;

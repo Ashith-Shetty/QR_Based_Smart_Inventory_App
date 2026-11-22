@@ -10,6 +10,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.yourname.qrinventory.utils.AppSettings;
+
 public class NetworkMonitor {
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static boolean started = false;
@@ -37,7 +39,7 @@ public class NetworkMonitor {
             Log.d("NetworkMonitor", "online = " + now);
             if (now) {
                 Toast.makeText(app, "Back online", Toast.LENGTH_LONG).show();
-                WorkScheduler.runNow(app);   // re-run the stock/expiry check
+                if (AppSettings.alertsEnabled(app)) WorkScheduler.runNow(app);
             } else {
                 Toast.makeText(app, "You are offline", Toast.LENGTH_LONG).show();
             }

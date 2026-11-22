@@ -75,6 +75,11 @@
             android:name=".ui.StoreMapActivity"
             android:exported="false"
             android:label="Nearby stores" />
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:label="Settings" />
     </application>
 
 </manifest>

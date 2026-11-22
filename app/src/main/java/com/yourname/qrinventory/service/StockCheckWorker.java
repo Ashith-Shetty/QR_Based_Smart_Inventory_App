@@ -6,9 +6,12 @@ import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import com.yourname.qrinventory.data.AppDatabase;
 import com.yourname.qrinventory.model.Product;
+import com.yourname.qrinventory.utils.AppSettings;
 import java.util.List;
 
 public class StockCheckWorker extends Worker {
+    public static final String KEY_MANUAL = "manual";
+
     public StockCheckWorker(@NonNull Context ctx, @NonNull WorkerParameters params) {
         super(ctx, params);
     }
@@ -16,18 +19,24 @@ public class StockCheckWorker extends Worker {
     @NonNull @Override
     public Result doWork() {
         Context ctx = getApplicationContext();
+        boolean manual = getInputData().getBoolean(KEY_MANUAL, false);
+        // The scheduled run respects the Settings switch; the "check now" button always runs
+        if (!manual && !AppSettings.alertsEnabled(ctx)) return Result.success();
+
         AppDatabase db = AppDatabase.get(ctx);
         NotificationHelper.createChannel(ctx);
 
         List<Product> low = db.productDao().lowStockNow();
-        long in3Days = System.currentTimeMillis() + 3L * 86400000L;
-        List<Product> expiring = db.productDao().expiringBefore(in3Days);
+        int days = AppSettings.expiryDays(ctx);
+        long limit = System.currentTimeMillis() + days * 86400000L;
+        List<Product> expiring = db.productDao().expiringBefore(limit);
 
         if (!low.isEmpty()) {
             NotificationHelper.show(ctx, 1001, "Low stock: " + low.size() + " items", names(low));
         }
         if (!expiring.isEmpty()) {
-            NotificationHelper.show(ctx, 1002, "Expiring within 3 days: " + expiring.size() + " items", names(expiring));
+            NotificationHelper.show(ctx, 1002,
+                    "Expiring within " + days + " days: " + expiring.size() + " items", names(expiring));
         }
         return Result.success();
     }
